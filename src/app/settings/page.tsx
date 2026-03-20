@@ -233,8 +233,8 @@ export default function SettingsPage() {
                 <input
                   className="trading-input"
                   placeholder="Twelve Data API key..."
-                  value={((settings as unknown) as Record<string, string>).twelveDataKey || ''}
-                  onChange={e => updateSettings({ twelveDataKey: e.target.value } as never)}
+                  value={settings.twelveDataKey}
+                  onChange={e => updateSettings({ twelveDataKey: e.target.value })}
                 />
               </div>
 
@@ -254,8 +254,8 @@ export default function SettingsPage() {
                 <input
                   className="trading-input"
                   placeholder="Alpha Vantage API key..."
-                  value={((settings as unknown) as Record<string, string>).alphaVantageKey || ''}
-                  onChange={e => updateSettings({ alphaVantageKey: e.target.value } as never)}
+                  value={settings.alphaVantageKey}
+                  onChange={e => updateSettings({ alphaVantageKey: e.target.value })}
                 />
               </div>
             </div>
