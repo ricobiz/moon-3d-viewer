@@ -3,16 +3,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, BrainCircuit, ListOrdered, Settings,
-  TrendingUp, Activity, ChevronLeft, ChevronRight, Zap,
-  BookOpen, Shield
+  TrendingUp, ChevronLeft, ChevronRight, Zap,
+  CandlestickChart, History, Bot
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/chart', icon: CandlestickChart, label: 'Price Chart' },
+  { href: '/autotrader', icon: Bot, label: 'AI AutoTrader' },
   { href: '/strategies', icon: BrainCircuit, label: 'AI Strategies' },
   { href: '/trades', icon: ListOrdered, label: 'Live Trades' },
+  { href: '/history', icon: History, label: 'Trade History' },
   { href: '/analytics', icon: TrendingUp, label: 'Analytics' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
