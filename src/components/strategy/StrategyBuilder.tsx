@@ -6,7 +6,7 @@ import {
   Settings2, Play
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
-import { generateStrategy, AVAILABLE_MODELS } from '@/lib/openrouter';
+import { AVAILABLE_MODELS } from '@/lib/openrouter';
 import { cn, genId } from '@/lib/utils';
 
 const TIMEFRAMES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'];
@@ -70,12 +70,25 @@ export default function StrategyBuilder({ onCreated }: Props) {
     setGeneratedCode('');
 
     try {
-      const result = await generateStrategy(
-        description,
-        settings.openrouterApiKey,
-        model,
-        { symbol, timeframe, riskPercent, lotSize }
-      );
+      const res = await fetch('/api/generate-strategy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description,
+          apiKey: settings.openrouterApiKey,
+          model,
+          symbol,
+          timeframe,
+          riskPercent,
+          lotSize,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || result.error) {
+        throw new Error(result.error || `Server error ${res.status}`);
+      }
 
       setGeneratedCode(result.code);
       setStrategyName(result.name);

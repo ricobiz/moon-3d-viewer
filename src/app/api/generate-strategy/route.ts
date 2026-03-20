@@ -69,11 +69,15 @@ Generate the complete MQL5 EA code now:`;
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      return NextResponse.json(
-        { error: `OpenRouter API error: ${response.status} - ${error}` },
-        { status: response.status }
-      );
+      let errText = '';
+      try { errText = await response.text(); } catch {}
+      // Parse OpenRouter error message if JSON
+      let errMsg = `OpenRouter error ${response.status}`;
+      try {
+        const errJson = JSON.parse(errText);
+        errMsg = errJson?.error?.message || errJson?.error || errMsg;
+      } catch {}
+      return NextResponse.json({ error: errMsg }, { status: 200 });
     }
 
     const data = await response.json();

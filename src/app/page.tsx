@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import StatsCards from '@/components/dashboard/StatsCards';
 import PnLChart from '@/components/dashboard/PnLChart';
@@ -7,11 +7,12 @@ import ActiveTrades from '@/components/dashboard/ActiveTrades';
 import MarketOverview from '@/components/dashboard/MarketOverview';
 import StrategyStatus from '@/components/dashboard/StrategyStatus';
 import { useStore } from '@/lib/store';
+import { Key, ArrowRight, Zap } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { trades, accountInfo, strategies } = useStore();
+  const { trades, accountInfo, strategies, settings } = useStore();
+  const hasApiKey = !!settings.openrouterApiKey;
 
-  // Demo data for when MT5 is not connected
   const demoAccount = accountInfo || {
     balance: 10000.00,
     equity: 10247.50,
@@ -38,6 +39,30 @@ export default function DashboardPage() {
     <main className="flex-1 overflow-y-auto">
       <Header title="Dashboard" />
       <div className="p-5 space-y-5">
+
+        {/* Setup Banner — shown until API key is set */}
+        {!hasApiKey && (
+          <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-accent-blue/30 bg-gradient-to-r from-accent-blue/10 to-accent-purple/10">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-accent-blue/20 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-4 h-4 text-accent-blue" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-text-primary">Добавьте OpenRouter API ключ для начала работы</p>
+                <p className="text-xs text-text-muted">Получите бесплатно на <span className="text-accent-blue">openrouter.ai/keys</span> · Поддерживает Claude, GPT-4, Gemini и др.</p>
+              </div>
+            </div>
+            <Link
+              href="/settings"
+              className="flex items-center gap-2 px-4 py-2 bg-accent-blue hover:bg-accent-blue/80 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0"
+            >
+              <Key className="w-3.5 h-3.5" />
+              Настройки
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
+
         {/* Stats Row */}
         <StatsCards account={demoAccount} trades={demoTrades} />
 
