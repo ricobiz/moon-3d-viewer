@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, BrainCircuit, ListOrdered, Settings,
   TrendingUp, ChevronLeft, ChevronRight, Zap,
-  CandlestickChart, History, Bot
+  CandlestickChart, History, Bot, MessageSquare
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/chart', icon: CandlestickChart, label: 'Price Chart' },
+  { href: '/chat', icon: MessageSquare, label: 'AI Strategy Chat' },
   { href: '/autotrader', icon: Bot, label: 'AI AutoTrader' },
   { href: '/strategies', icon: BrainCircuit, label: 'AI Strategies' },
   { href: '/trades', icon: ListOrdered, label: 'Live Trades' },
