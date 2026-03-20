@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import {
   Key, Server, Shield, Bell, Save, Eye, EyeOff,
   ExternalLink, CheckCircle, XCircle, Loader2, Info,
-  RefreshCw, Building2, CreditCard, ChevronDown
+  RefreshCw, Building2, CreditCard, ChevronDown, Database, Monitor
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -200,6 +200,122 @@ export default function SettingsPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </section>
+
+        {/* Real Market Data */}
+        <section className="trading-card space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
+            <Database className="w-4 h-4 text-accent-green" />
+            <h2 className="text-sm font-semibold text-text-primary">Real Market Data</h2>
+            <span className="ml-auto text-xs bg-accent-yellow/10 text-accent-yellow border border-accent-yellow/20 px-2 py-0.5 rounded-full">Free APIs available</span>
+          </div>
+
+          <div className="text-xs text-text-secondary space-y-3">
+            <p>Without a data key, the app uses <strong className="text-accent-yellow">synthetic (simulated) data</strong> for charts and backtests. Add a free key for real historical prices.</p>
+
+            <div className="space-y-3">
+              {/* Twelve Data */}
+              <div className="p-3 bg-bg-tertiary rounded-lg border border-border space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-text-primary">Twelve Data</p>
+                    <p className="text-text-muted">800 free requests/day · Forex, Crypto, Stocks</p>
+                  </div>
+                  <span className="text-accent-green font-semibold">FREE</span>
+                </div>
+                <ol className="list-decimal list-inside space-y-1 text-text-muted">
+                  <li>Go to <span className="text-accent-blue">twelvedata.com</span> → Sign Up (free)</li>
+                  <li>Copy your API key from the dashboard</li>
+                  <li>Paste it below</li>
+                </ol>
+                <input
+                  className="trading-input"
+                  placeholder="Twelve Data API key..."
+                  value={((settings as unknown) as Record<string, string>).twelveDataKey || ''}
+                  onChange={e => updateSettings({ twelveDataKey: e.target.value } as never)}
+                />
+              </div>
+
+              {/* Alpha Vantage */}
+              <div className="p-3 bg-bg-tertiary rounded-lg border border-border space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-text-primary">Alpha Vantage</p>
+                    <p className="text-text-muted">25 free requests/day · Forex, Crypto, Stocks</p>
+                  </div>
+                  <span className="text-accent-green font-semibold">FREE</span>
+                </div>
+                <ol className="list-decimal list-inside space-y-1 text-text-muted">
+                  <li>Go to <span className="text-accent-blue">alphavantage.co/support/#api-key</span> → Get free key</li>
+                  <li>Paste it below</li>
+                </ol>
+                <input
+                  className="trading-input"
+                  placeholder="Alpha Vantage API key..."
+                  value={((settings as unknown) as Record<string, string>).alphaVantageKey || ''}
+                  onChange={e => updateSettings({ alphaVantageKey: e.target.value } as never)}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* VPS for 24/7 trading */}
+        <section className="trading-card space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
+            <Monitor className="w-4 h-4 text-accent-purple" />
+            <h2 className="text-sm font-semibold text-text-primary">Trade 24/7 Without a PC</h2>
+          </div>
+
+          <div className="text-xs text-text-secondary space-y-3 leading-relaxed">
+            <p>You have <strong className="text-text-primary">two options</strong> to trade automatically without keeping your computer on:</p>
+
+            {/* Option 1: MT5 VPS */}
+            <div className="p-3 bg-accent-green/5 border border-accent-green/20 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="bg-accent-green text-white text-[10px] font-bold px-2 py-0.5 rounded-full">EASIEST</span>
+                <p className="font-semibold text-text-primary">MT5 Built-in VPS (~$5/month)</p>
+              </div>
+              <p>MetaTrader 5 has a built-in VPS service. Your Expert Advisors (EAs) run 24/7 on MetaQuotes servers — no Windows computer needed.</p>
+              <ol className="list-decimal list-inside space-y-1 text-text-muted">
+                <li>Open MetaTrader 5 terminal</li>
+                <li>Go to <strong className="text-text-primary">Tools → VPS</strong></li>
+                <li>Subscribe (~$5/month, or free with some brokers if monthly volume ≥ 3 lots)</li>
+                <li>MT5 automatically migrates your EAs to the cloud server</li>
+              </ol>
+              <p className="text-accent-green">Best for: running MQL5 EAs generated by this app (see AI Strategies page)</p>
+            </div>
+
+            {/* Option 2: Windows VPS */}
+            <div className="p-3 bg-accent-blue/5 border border-accent-blue/20 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="bg-accent-blue text-white text-[10px] font-bold px-2 py-0.5 rounded-full">ADVANCED</span>
+                <p className="font-semibold text-text-primary">Windows VPS ($10–20/month)</p>
+              </div>
+              <p>Rent a Windows VPS, install MT5 + our Python bridge. This connects the full web app to MT5 running in the cloud.</p>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {[
+                  { name: 'Vultr', note: 'From $6/mo Windows', url: 'vultr.com' },
+                  { name: 'ForexVPS.net', note: 'Optimized for MT5', url: 'forexvps.net' },
+                  { name: 'BeeksFX', note: 'Low latency VPS', url: 'beeksfx.com' },
+                  { name: 'DigitalOcean', note: 'From $12/mo Windows', url: 'digitalocean.com' },
+                ].map(v => (
+                  <div key={v.name} className="bg-bg-primary p-2 rounded">
+                    <p className="font-medium text-text-primary">{v.name}</p>
+                    <p className="text-text-muted">{v.note}</p>
+                    <p className="text-accent-blue">{v.url}</p>
+                  </div>
+                ))}
+              </div>
+              <ol className="list-decimal list-inside space-y-1 text-text-muted mt-1">
+                <li>Rent a Windows VPS from any provider above</li>
+                <li>Install MetaTrader 5 + Python on the VPS</li>
+                <li>Copy <code className="bg-bg-primary px-1 rounded text-accent-blue">mt5-bridge/bridge.py</code> to the VPS</li>
+                <li>Run the bridge: <code className="bg-bg-primary px-1 rounded text-accent-blue">python bridge.py --host 0.0.0.0</code></li>
+                <li>In Bridge URL below, enter your VPS IP: <code className="bg-bg-primary px-1 rounded text-accent-blue">http://YOUR.VPS.IP:8765</code></li>
+              </ol>
             </div>
           </div>
         </section>

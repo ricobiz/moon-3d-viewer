@@ -3,23 +3,23 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Settings,
-  CandlestickChart, History, Bot, MessageSquare
+  CandlestickChart, Bot, MessageSquare, FlaskConical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const mobileNavItems = [
   { href: '/', icon: LayoutDashboard, label: 'Home' },
+  { href: '/lab', icon: FlaskConical, label: 'Lab' },
   { href: '/chart', icon: CandlestickChart, label: 'Chart' },
   { href: '/chat', icon: MessageSquare, label: 'Chat' },
   { href: '/autotrader', icon: Bot, label: 'AutoTrade' },
-  { href: '/history', icon: History, label: 'History' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export default function MobileNav() {
   const pathname = usePathname();
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-secondary border-t border-border flex items-center safe-bottom">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-secondary border-t border-border flex items-center">
       {mobileNavItems.map(({ href, icon: Icon, label }) => {
         const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
         return (
