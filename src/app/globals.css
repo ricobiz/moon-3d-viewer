@@ -1,0 +1,223 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --scrollbar-thumb: #1e2d3d;
+  --scrollbar-track: #080d14;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: #080d14;
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2d4163;
+}
+
+/* Trading terminal styles */
+.terminal-text {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.green-glow {
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+.red-glow {
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+
+.blue-glow {
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Price animation */
+@keyframes flash-green {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(16, 185, 129, 0.15); }
+}
+@keyframes flash-red {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(239, 68, 68, 0.15); }
+}
+
+.flash-green { animation: flash-green 0.5s ease; }
+.flash-red { animation: flash-red 0.5s ease; }
+
+/* Gradient borders */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(#141d2b, #141d2b) padding-box,
+              linear-gradient(135deg, #3b82f6, #8b5cf6) border-box;
+  border: 1px solid transparent;
+}
+
+/* Status dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.active {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+  animation: pulse 2s infinite;
+}
+
+.status-dot.inactive {
+  background: #475569;
+}
+
+.status-dot.error {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+}
+
+/* Code editor */
+.code-block {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 4;
+}
+
+/* Sidebar active link */
+.nav-link {
+  @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-all duration-150 text-sm font-medium;
+}
+
+.nav-link.active {
+  @apply text-accent-blue bg-accent-blue/10 border border-accent-blue/20;
+}
+
+/* Card styles */
+.trading-card {
+  @apply bg-bg-card border border-border rounded-xl p-4;
+}
+
+/* Stat value */
+.stat-value {
+  @apply text-2xl font-bold font-mono text-text-primary;
+}
+
+.stat-positive {
+  @apply text-accent-green;
+}
+
+.stat-negative {
+  @apply text-accent-red;
+}
+
+/* Table */
+.trade-table th {
+  @apply text-xs font-medium text-text-muted uppercase tracking-wider pb-2 text-left;
+}
+
+.trade-table td {
+  @apply text-sm py-2.5 border-t border-border/50;
+}
+
+/* Input styles */
+.trading-input {
+  @apply w-full bg-bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-text-primary
+         placeholder-text-muted focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30
+         transition-colors;
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-accent-blue hover:bg-accent-blue-dim text-white px-4 py-2 rounded-lg text-sm font-medium
+         transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply bg-bg-tertiary hover:bg-bg-hover border border-border text-text-secondary hover:text-text-primary
+         px-4 py-2 rounded-lg text-sm font-medium transition-colors;
+}
+
+.btn-success {
+  @apply bg-accent-green hover:bg-accent-green-dim text-white px-4 py-2 rounded-lg text-sm font-medium
+         transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-danger {
+  @apply bg-accent-red hover:bg-accent-red-dim text-white px-4 py-2 rounded-lg text-sm font-medium
+         transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Tooltip */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e2d3d;
+  color: #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  border: 1px solid #2d4163;
+  z-index: 100;
+}
+
+/* Textarea auto-resize appearance */
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Select */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px !important;
+}
