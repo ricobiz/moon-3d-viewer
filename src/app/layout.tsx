@@ -18,11 +18,12 @@ export default function RootLayout({
       <body className="bg-bg-primary text-text-primary antialiased">
         <div className="flex h-screen overflow-hidden">
           {/* Sidebar: hidden on mobile, visible on lg+ */}
-          <div className="hidden lg:flex">
+          <div className="hidden lg:flex flex-shrink-0 h-full">
             <Sidebar />
           </div>
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-hidden pb-14 lg:pb-0">
+          {/* Main content — min-h-0 is critical for nested flex scroll to work */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col pb-14 lg:pb-0">
               {children}
             </div>
           </div>
