@@ -2,16 +2,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, BrainCircuit, ListOrdered, TrendingUp,
-  Settings, CandlestickChart, History, Bot
+  LayoutDashboard, Settings,
+  CandlestickChart, History, Bot, MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const mobileNavItems = [
   { href: '/', icon: LayoutDashboard, label: 'Home' },
   { href: '/chart', icon: CandlestickChart, label: 'Chart' },
+  { href: '/chat', icon: MessageSquare, label: 'Chat' },
   { href: '/autotrader', icon: Bot, label: 'AutoTrade' },
-  { href: '/trades', icon: ListOrdered, label: 'Trades' },
   { href: '/history', icon: History, label: 'History' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
