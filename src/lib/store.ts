@@ -15,6 +15,8 @@ export interface Settings {
   riskPercent: number;
   theme: 'dark';
   notifications: boolean;
+  twelveDataKey: string;
+  alphaVantageKey: string;
 }
 
 export interface Trade {
@@ -135,6 +137,8 @@ const defaultSettings: Settings = {
   riskPercent: 1,
   theme: 'dark',
   notifications: true,
+  twelveDataKey: '',
+  alphaVantageKey: '',
 };
 
 // Sample equity history for demo

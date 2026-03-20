@@ -34,10 +34,11 @@ const TF_AV: Record<string, string> = {
   M1: '1min', M5: '5min', M15: '15min', M30: '30min', H1: '60min',
 };
 
-async function fetchTwelveData(symbol: string, tf: string, count: number): Promise<Candle[] | null> {
+async function fetchTwelveData(symbol: string, tf: string, count: number, apiKey?: string): Promise<Candle[] | null> {
   const interval = TF_TWELVE[tf] || '15min';
+  const keyParam = apiKey ? `&apikey=${apiKey}` : '';
   // Twelve Data free endpoint — rate limited but no key required for basic
-  const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${count}&format=JSON`;
+  const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${count}&format=JSON${keyParam}`;
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
@@ -59,8 +60,8 @@ async function fetchTwelveData(symbol: string, tf: string, count: number): Promi
   }
 }
 
-async function fetchAlphaVantage(symbol: string, tf: string, count: number): Promise<Candle[] | null> {
-  const apiKey = process.env.ALPHA_VANTAGE_KEY || 'demo';
+async function fetchAlphaVantage(symbol: string, tf: string, count: number, apiKey?: string): Promise<Candle[] | null> {
+  const key = apiKey || process.env.ALPHA_VANTAGE_KEY || 'demo';
   const interval = TF_AV[tf];
 
   // Only forex pairs have FX_INTRADAY; for D1+ use FX_DAILY
@@ -72,14 +73,14 @@ async function fetchAlphaVantage(symbol: string, tf: string, count: number): Pro
   let dataKey: string;
 
   if (isFx && interval) {
-    url = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${fromCur}&to_symbol=${toCur}&interval=${interval}&outputsize=full&apikey=${apiKey}`;
+    url = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${fromCur}&to_symbol=${toCur}&interval=${interval}&outputsize=full&apikey=${key}`;
     dataKey = `Time Series FX (${interval})`;
   } else if (isFx && (tf === 'D1' || tf === 'W1')) {
-    url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${fromCur}&to_symbol=${toCur}&outputsize=full&apikey=${apiKey}`;
+    url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${fromCur}&to_symbol=${toCur}&outputsize=full&apikey=${key}`;
     dataKey = 'Time Series FX (Daily)';
   } else {
     // Crypto or stock
-    url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${apiKey}`;
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${key}`;
     dataKey = 'Time Series (Daily)';
   }
 
@@ -149,15 +150,18 @@ export async function GET(request: NextRequest) {
   const symbol = searchParams.get('symbol') || 'EURUSD';
   const timeframe = searchParams.get('timeframe') || 'M15';
   const count = Math.min(500, parseInt(searchParams.get('count') || '100'));
+  // Client-supplied API keys (from user Settings, passed as query params)
+  const twelveKey = searchParams.get('twelveKey') || undefined;
+  const avKey = searchParams.get('avKey') || undefined;
 
   // 1. Try Twelve Data
-  const twelveCandles = await fetchTwelveData(symbol, timeframe, count);
+  const twelveCandles = await fetchTwelveData(symbol, timeframe, count, twelveKey);
   if (twelveCandles && twelveCandles.length > 0) {
     return NextResponse.json({ candles: twelveCandles, source: 'twelve_data', symbol, timeframe });
   }
 
   // 2. Try Alpha Vantage
-  const avCandles = await fetchAlphaVantage(symbol, timeframe, count);
+  const avCandles = await fetchAlphaVantage(symbol, timeframe, count, avKey);
   if (avCandles && avCandles.length > 0) {
     return NextResponse.json({ candles: avCandles, source: 'alpha_vantage', symbol, timeframe });
   }
