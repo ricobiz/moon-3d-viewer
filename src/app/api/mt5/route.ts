@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 // MT5 Bridge API proxy
 // The bridge.py script runs on the user's Windows machine with MT5
 
-const getBridgeUrl = () => {
-  return process.env.MT5_BRIDGE_URL || 'http://localhost:8765';
+const getBridgeUrl = (settings?: { mt5BridgeUrl?: string }) => {
+  return settings?.mt5BridgeUrl || process.env.MT5_BRIDGE_URL || 'http://localhost:8765';
 };
 
 export async function GET(request: NextRequest) {
@@ -12,11 +12,22 @@ export async function GET(request: NextRequest) {
   const action = searchParams.get('action') || 'status';
   const bridgeUrl = getBridgeUrl();
 
+  // Build the bridge URL with query params forwarded
+  let bridgeEndpoint = `${bridgeUrl}/${action}`;
+
+  // Forward additional query params (symbol, timeframe, count, days, etc.)
+  const forwardParams = new URLSearchParams();
+  searchParams.forEach((value, key) => {
+    if (key !== 'action') forwardParams.set(key, value);
+  });
+  const qs = forwardParams.toString();
+  if (qs) bridgeEndpoint += `?${qs}`;
+
   try {
-    const response = await fetch(`${bridgeUrl}/${action}`, {
+    const response = await fetch(bridgeEndpoint, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {
@@ -28,8 +39,7 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
-    // Bridge is not running
+  } catch {
     return NextResponse.json(
       {
         connected: false,
@@ -63,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'MT5 bridge not reachable' },
       { status: 200 }

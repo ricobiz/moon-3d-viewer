@@ -1,13 +1,21 @@
 'use client';
 import Header from '@/components/layout/Header';
 import { useStore } from '@/lib/store';
-import { AVAILABLE_MODELS } from '@/lib/openrouter';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Key, Server, Shield, Bell, Save, Eye, EyeOff,
-  ExternalLink, CheckCircle, XCircle, Loader2, Info
+  ExternalLink, CheckCircle, XCircle, Loader2, Info,
+  RefreshCw, Building2, CreditCard, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface OpenRouterModel {
+  id: string;
+  name: string;
+  description: string;
+  contextLength: number;
+  pricing: { prompt: number; completion: number };
+}
 
 export default function SettingsPage() {
   const { settings, updateSettings, addNotification, setMt5Connected, setAccountInfo } = useStore();
@@ -15,6 +23,33 @@ export default function SettingsPage() {
   const [testingMt5, setTestingMt5] = useState(false);
   const [mt5TestResult, setMt5TestResult] = useState<'success' | 'error' | null>(null);
   const [saved, setSaved] = useState(false);
+  const [models, setModels] = useState<OpenRouterModel[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [modelSearch, setModelSearch] = useState('');
+  const [showAllModels, setShowAllModels] = useState(false);
+
+  const fetchModels = async () => {
+    setLoadingModels(true);
+    try {
+      const res = await fetch('/api/openrouter-models');
+      const data = await res.json();
+      if (data.models?.length) {
+        setModels(data.models);
+      }
+    } catch {
+      addNotification({ type: 'error', title: 'Models Error', message: 'Cannot fetch OpenRouter models' });
+    }
+    setLoadingModels(false);
+  };
+
+  useEffect(() => { fetchModels(); }, []);
+
+  const filteredModels = models.filter(m =>
+    !modelSearch ||
+    m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
+    m.id.toLowerCase().includes(modelSearch.toLowerCase())
+  );
+  const displayedModels = showAllModels ? filteredModels : filteredModels.slice(0, 20);
 
   const handleSave = () => {
     setSaved(true);
@@ -59,7 +94,7 @@ export default function SettingsPage() {
         <section className="trading-card space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-border">
             <Key className="w-4 h-4 text-accent-purple" />
-            <h2 className="text-sm font-semibold text-text-primary">AI Configuration</h2>
+            <h2 className="text-sm font-semibold text-text-primary">AI Configuration (OpenRouter)</h2>
           </div>
 
           <div className="space-y-3">
@@ -84,32 +119,173 @@ export default function SettingsPage() {
                 <Info className="w-3 h-3 text-text-muted flex-shrink-0" />
                 <p className="text-xs text-text-muted">
                   Get your free API key at{' '}
-                  <a
-                    href="https://openrouter.ai/keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent-blue hover:underline inline-flex items-center gap-0.5"
-                  >
+                  <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer"
+                    className="text-accent-blue hover:underline inline-flex items-center gap-0.5">
                     openrouter.ai/keys <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 </p>
               </div>
             </div>
 
+            {/* Model selection — dynamic */}
             <div>
-              <label className="text-xs text-text-muted mb-1.5 block font-medium">Default AI Model</label>
-              <select
-                className="trading-input"
-                value={settings.openrouterModel}
-                onChange={(e) => updateSettings({ openrouterModel: e.target.value })}
-              >
-                {AVAILABLE_MODELS.map(m => (
-                  <option key={m.id} value={m.id}>{m.name} — {m.description}</option>
-                ))}
-              </select>
-              <p className="text-xs text-text-muted mt-1">
-                Claude 3.5 Sonnet recommended for best MQL5 code quality
-              </p>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs text-text-muted font-medium">Default AI Model</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-muted">{models.length > 0 ? `${models.length} models available` : 'Loading...'}</span>
+                  <button onClick={fetchModels} disabled={loadingModels}
+                    className="flex items-center gap-1 text-xs text-accent-blue hover:underline disabled:opacity-50">
+                    <RefreshCw className={cn('w-3 h-3', loadingModels && 'animate-spin')} />
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              {/* Current model display */}
+              <div className="mb-2 p-2 bg-bg-tertiary border border-border rounded-lg text-xs">
+                <span className="text-text-muted">Current: </span>
+                <span className="text-text-primary font-medium">{settings.openrouterModel}</span>
+              </div>
+
+              {/* Search + list */}
+              <input
+                type="text"
+                className="trading-input mb-2 text-xs"
+                placeholder="Search models..."
+                value={modelSearch}
+                onChange={e => setModelSearch(e.target.value)}
+              />
+
+              {loadingModels ? (
+                <div className="flex items-center gap-2 py-3 text-xs text-text-muted">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Loading models from OpenRouter...
+                </div>
+              ) : (
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <div className="max-h-56 overflow-y-auto">
+                    {displayedModels.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => updateSettings({ openrouterModel: m.id })}
+                        className={cn(
+                          'w-full text-left px-3 py-2 text-xs border-b border-border/50 last:border-0 transition-colors hover:bg-bg-hover',
+                          settings.openrouterModel === m.id && 'bg-accent-blue/5 border-l-2 border-l-accent-blue'
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={cn('font-medium', settings.openrouterModel === m.id ? 'text-accent-blue' : 'text-text-primary')}>
+                            {m.name}
+                          </span>
+                          {m.pricing.prompt === 0 ? (
+                            <span className="text-accent-green text-[10px] font-medium">FREE</span>
+                          ) : (
+                            <span className="text-text-muted text-[10px]">${(m.pricing.prompt * 1000000).toFixed(2)}/Mtok</span>
+                          )}
+                        </div>
+                        <div className="text-text-muted mt-0.5 truncate">{m.id}</div>
+                        {m.contextLength > 0 && (
+                          <div className="text-text-muted text-[10px]">{(m.contextLength / 1000).toFixed(0)}k ctx</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {filteredModels.length > 20 && (
+                    <button
+                      onClick={() => setShowAllModels(!showAllModels)}
+                      className="w-full py-2 text-xs text-accent-blue hover:bg-bg-hover flex items-center justify-center gap-1 border-t border-border"
+                    >
+                      <ChevronDown className={cn('w-3 h-3 transition-transform', showAllModels && 'rotate-180')} />
+                      {showAllModels ? 'Show less' : `Show all ${filteredModels.length} models`}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Broker / Provider info */}
+        <section className="trading-card space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
+            <Building2 className="w-4 h-4 text-accent-blue" />
+            <h2 className="text-sm font-semibold text-text-primary">Broker & Provider</h2>
+          </div>
+
+          <div className="text-xs text-text-secondary space-y-3 leading-relaxed">
+            <p>
+              This platform connects to <strong className="text-text-primary">MetaTrader 5 (MT5)</strong> — the industry-standard trading terminal.
+              MT5 works with <strong className="text-text-primary">hundreds of brokers worldwide</strong>.
+            </p>
+
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                { name: 'IC Markets', type: 'ECN/Forex', note: 'Tight spreads, raw ECN, popular for algo trading', url: 'icmarkets.com' },
+                { name: 'Pepperstone', type: 'ECN/Forex/Crypto', note: 'Excellent MT5 support, fast execution', url: 'pepperstone.com' },
+                { name: 'Exness', type: 'Forex/CFD', note: 'High leverage, instant withdrawals', url: 'exness.com' },
+                { name: 'XM', type: 'Forex/Stocks/Crypto', note: 'Low minimum deposit ($5)', url: 'xm.com' },
+                { name: 'Alpari', type: 'Forex/CFD', note: 'Classic MT5 broker, wide asset range', url: 'alpari.com' },
+                { name: 'RoboForex', type: 'Forex/Crypto/Stocks', note: 'Supports copy trading and EAs', url: 'roboforex.com' },
+              ].map(b => (
+                <div key={b.name} className="flex items-start gap-3 p-2.5 bg-bg-tertiary rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-text-primary">{b.name}</span>
+                      <span className="text-[10px] text-accent-blue bg-accent-blue/10 px-1.5 py-0.5 rounded">{b.type}</span>
+                    </div>
+                    <p className="text-text-muted mt-0.5">{b.note}</p>
+                    <p className="text-accent-blue mt-0.5">{b.url}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-3 bg-accent-blue/5 border border-accent-blue/20 rounded-lg">
+              <p className="font-medium text-text-primary mb-1">How to connect:</p>
+              <ol className="list-decimal list-inside space-y-1 text-text-secondary">
+                <li>Open an account with any MT5 broker above</li>
+                <li>Download and install MetaTrader 5 from the broker&apos;s website</li>
+                <li>Log in to your live or demo account in MT5</li>
+                <li>Run <code className="bg-bg-primary px-1 py-0.5 rounded text-accent-blue">mt5-bridge/bridge.py</code> on the same Windows PC</li>
+                <li>Enable MT5 Bridge below and click &quot;Test Connection&quot;</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        {/* Deposit / Funding info */}
+        <section className="trading-card space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
+            <CreditCard className="w-4 h-4 text-accent-green" />
+            <h2 className="text-sm font-semibold text-text-primary">Funding Your Account</h2>
+          </div>
+
+          <div className="text-xs text-text-secondary space-y-3 leading-relaxed">
+            <p>Deposit methods vary by broker. Most support:</p>
+
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { method: 'Bank Transfer (SWIFT/SEPA)', time: '1–3 business days', fee: 'Free' },
+                { method: 'Credit/Debit Card (Visa, MC)', time: 'Instant', fee: '0–1.5%' },
+                { method: 'Cryptocurrency (BTC, ETH, USDT)', time: '10–30 min', fee: 'Network fee' },
+                { method: 'Neteller / Skrill', time: 'Instant', fee: '1–2%' },
+                { method: 'Perfect Money / WebMoney', time: 'Instant', fee: '0.5%' },
+                { method: 'Local bank transfer', time: 'Same day', fee: 'Varies' },
+              ].map(({ method, time, fee }) => (
+                <div key={method} className="p-2 bg-bg-tertiary rounded-lg">
+                  <p className="font-medium text-text-primary">{method}</p>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <span className="text-text-muted">{time}</span>
+                    <span className="text-accent-green">{fee}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-3 bg-accent-yellow/5 border border-accent-yellow/20 rounded-lg">
+              <p className="font-medium text-accent-yellow mb-1">Risk Warning</p>
+              <p>CFDs and Forex trading involve significant risk. Only trade with money you can afford to lose.
+                Start with a <strong className="text-text-primary">demo account</strong> to test strategies before using real funds.
+                Most brokers offer free demo accounts with virtual money.</p>
             </div>
           </div>
         </section>
@@ -121,7 +297,6 @@ export default function SettingsPage() {
             <h2 className="text-sm font-semibold text-text-primary">MetaTrader 5 Bridge</h2>
           </div>
 
-          {/* Info Box */}
           <div className="p-3 bg-accent-blue/5 border border-accent-blue/20 rounded-lg">
             <p className="text-xs text-text-secondary leading-relaxed">
               The MT5 bridge is a Python script that runs on your Windows machine with MetaTrader 5 installed.
@@ -193,73 +368,39 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-text-muted mb-1.5 block font-medium">Default Lot Size</label>
-              <input
-                type="number"
-                className="trading-input"
-                value={settings.defaultLotSize}
-                min={0.01}
-                max={100}
-                step={0.01}
-                onChange={(e) => updateSettings({ defaultLotSize: parseFloat(e.target.value) })}
-              />
+              <input type="number" className="trading-input" value={settings.defaultLotSize}
+                min={0.01} max={100} step={0.01}
+                onChange={(e) => updateSettings({ defaultLotSize: parseFloat(e.target.value) })} />
             </div>
             <div>
               <label className="text-xs text-text-muted mb-1.5 block font-medium">Risk per Trade (%)</label>
-              <input
-                type="number"
-                className="trading-input"
-                value={settings.riskPercent}
-                min={0.1}
-                max={20}
-                step={0.1}
-                onChange={(e) => updateSettings({ riskPercent: parseFloat(e.target.value) })}
-              />
+              <input type="number" className="trading-input" value={settings.riskPercent}
+                min={0.1} max={20} step={0.1}
+                onChange={(e) => updateSettings({ riskPercent: parseFloat(e.target.value) })} />
             </div>
             <div>
               <label className="text-xs text-text-muted mb-1.5 block font-medium">Default Stop Loss (pips)</label>
-              <input
-                type="number"
-                className="trading-input"
-                value={settings.defaultSlPips}
-                min={0}
-                step={1}
-                onChange={(e) => updateSettings({ defaultSlPips: parseInt(e.target.value) })}
-              />
+              <input type="number" className="trading-input" value={settings.defaultSlPips}
+                min={0} step={1}
+                onChange={(e) => updateSettings({ defaultSlPips: parseInt(e.target.value) })} />
             </div>
             <div>
               <label className="text-xs text-text-muted mb-1.5 block font-medium">Default Take Profit (pips)</label>
-              <input
-                type="number"
-                className="trading-input"
-                value={settings.defaultTpPips}
-                min={0}
-                step={1}
-                onChange={(e) => updateSettings({ defaultTpPips: parseInt(e.target.value) })}
-              />
+              <input type="number" className="trading-input" value={settings.defaultTpPips}
+                min={0} step={1}
+                onChange={(e) => updateSettings({ defaultTpPips: parseInt(e.target.value) })} />
             </div>
             <div>
               <label className="text-xs text-text-muted mb-1.5 block font-medium">Max Open Trades</label>
-              <input
-                type="number"
-                className="trading-input"
-                value={settings.maxOpenTrades}
-                min={1}
-                max={100}
-                step={1}
-                onChange={(e) => updateSettings({ maxOpenTrades: parseInt(e.target.value) })}
-              />
+              <input type="number" className="trading-input" value={settings.maxOpenTrades}
+                min={1} max={100} step={1}
+                onChange={(e) => updateSettings({ maxOpenTrades: parseInt(e.target.value) })} />
             </div>
             <div>
               <label className="text-xs text-text-muted mb-1.5 block font-medium">Max Daily Loss (%)</label>
-              <input
-                type="number"
-                className="trading-input"
-                value={settings.maxDailyLoss}
-                min={0.1}
-                max={50}
-                step={0.1}
-                onChange={(e) => updateSettings({ maxDailyLoss: parseFloat(e.target.value) })}
-              />
+              <input type="number" className="trading-input" value={settings.maxDailyLoss}
+                min={0.1} max={50} step={0.1}
+                onChange={(e) => updateSettings({ maxDailyLoss: parseFloat(e.target.value) })} />
             </div>
           </div>
         </section>

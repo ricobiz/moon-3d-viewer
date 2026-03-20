@@ -429,6 +429,88 @@ def get_history():
     return jsonify({"deals": result})
 
 
+@app.route('/candles', methods=['GET'])
+def get_candles():
+    """Get OHLCV candlestick data for a symbol."""
+    if not ensure_mt5():
+        return jsonify({"error": "MT5 not connected", "candles": []})
+
+    symbol = request.args.get('symbol', 'EURUSD')
+    timeframe_str = request.args.get('timeframe', 'M15')
+    count = int(request.args.get('count', 100))
+
+    # Map timeframe string to MT5 constant
+    tf_map = {
+        'M1': mt5.TIMEFRAME_M1,
+        'M5': mt5.TIMEFRAME_M5,
+        'M15': mt5.TIMEFRAME_M15,
+        'M30': mt5.TIMEFRAME_M30,
+        'H1': mt5.TIMEFRAME_H1,
+        'H4': mt5.TIMEFRAME_H4,
+        'D1': mt5.TIMEFRAME_D1,
+        'W1': mt5.TIMEFRAME_W1,
+    }
+    timeframe = tf_map.get(timeframe_str.upper(), mt5.TIMEFRAME_M15)
+
+    if not mt5.symbol_select(symbol, True):
+        return jsonify({"error": f"Cannot select symbol {symbol}", "candles": []})
+
+    rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
+    if rates is None or len(rates) == 0:
+        return jsonify({"error": "No candle data available", "candles": []})
+
+    candles = [
+        {
+            "time": int(r['time']),
+            "open": float(r['open']),
+            "high": float(r['high']),
+            "low": float(r['low']),
+            "close": float(r['close']),
+            "volume": int(r['tick_volume']),
+        }
+        for r in rates
+    ]
+
+    return jsonify({"candles": candles, "symbol": symbol, "timeframe": timeframe_str})
+
+
+@app.route('/modify', methods=['POST'])
+def modify_position():
+    """Modify SL/TP of an open position."""
+    if not ensure_mt5():
+        return jsonify({"success": False, "error": "MT5 not connected"})
+
+    data = request.json
+    ticket = int(data.get('ticket', 0))
+    sl = float(data.get('sl', 0))
+    tp = float(data.get('tp', 0))
+
+    positions = mt5.positions_get(ticket=ticket)
+    if not positions:
+        return jsonify({"success": False, "error": f"Position #{ticket} not found"})
+
+    pos = positions[0]
+    symbol_info = mt5.symbol_info(pos.symbol)
+    if not symbol_info:
+        return jsonify({"success": False, "error": f"Cannot get symbol info for {pos.symbol}"})
+
+    request_data = {
+        "action": mt5.TRADE_ACTION_SLTP,
+        "symbol": pos.symbol,
+        "position": ticket,
+        "sl": sl,
+        "tp": tp,
+    }
+
+    result = mt5.order_send(request_data)
+    if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+        log.info(f"✓ Modified #{ticket}: SL={sl} TP={tp}")
+        return jsonify({"success": True})
+    else:
+        err = result.comment if result else str(mt5.last_error())
+        return jsonify({"success": False, "error": f"Modify failed: {err}"})
+
+
 @app.route('/tick/<symbol>', methods=['GET'])
 def get_tick(symbol):
     """Get current price tick for a symbol."""
