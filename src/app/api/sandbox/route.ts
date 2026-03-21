@@ -176,8 +176,12 @@ function runBacktest(
   lotSize: number,
 ): BacktestResult {
   const signal = parseStrategy(strategy);
-  const isLarge = (candles[0]?.close || 1) > 100;
-  const pipValue = isLarge ? 1 : 0.0001;
+  // Use a percentage-based pip unit so SL/TP work correctly for all instruments:
+  // Forex (EURUSD ~1.085): pipUnit = 0.0001  → 50 pip SL = 0.0050
+  // Gold  (XAUUSD ~2320):  pipUnit = 0.2320  → 50 pip SL ≈ $11.60
+  // BTC   (BTCUSDT ~68000): pipUnit = 6.8000 → 50 pip SL ≈ $340
+  const basePrice = candles[0]?.close || 1;
+  const pipValue = basePrice > 10 ? basePrice * 0.0001 : 0.0001;
 
   let balance = initialBalance;
   let peakBalance = initialBalance;
@@ -230,11 +234,11 @@ function runBacktest(
       if (sig !== 0) {
         const price = c.close;
         const slPrice = sig === 1
-          ? price - slPips * pipValue * 10
-          : price + slPips * pipValue * 10;
+          ? price - slPips * pipValue
+          : price + slPips * pipValue;
         const tpPrice = sig === 1
-          ? price + tpPips * pipValue * 10
-          : price - tpPips * pipValue * 10;
+          ? price + tpPips * pipValue
+          : price - tpPips * pipValue;
         openPos = {
           type: sig === 1 ? 'BUY' : 'SELL',
           openPrice: price,
