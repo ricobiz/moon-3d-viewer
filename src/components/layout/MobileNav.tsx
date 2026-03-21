@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Settings,
-  CandlestickChart, Bot, MessageSquare, FlaskConical, ListOrdered
+  CandlestickChart, Bot, FlaskConical, ListOrdered, Microscope
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/lib/store';
@@ -11,7 +11,7 @@ import { useStore } from '@/lib/store';
 const mobileNavItems = [
   { href: '/', icon: LayoutDashboard, label: 'Home' },
   { href: '/lab', icon: FlaskConical, label: 'Lab' },
-  { href: '/chart', icon: CandlestickChart, label: 'Chart' },
+  { href: '/research', icon: Microscope, label: 'Research' },
   { href: '/trades', icon: ListOrdered, label: 'Trades' },
   { href: '/autotrader', icon: Bot, label: 'AutoTrade' },
   { href: '/settings', icon: Settings, label: 'Settings' },

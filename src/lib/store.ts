@@ -25,6 +25,12 @@ export interface Settings {
   binanceApiKey: string;
   binanceApiSecret: string;
   binanceFutures: boolean;
+  // Instrument watchlist (like MetaTrader Market Watch)
+  watchlist: string[];
+  // Vector memory for AI Research (Qdrant)
+  qdrantUrl: string;
+  qdrantApiKey: string;
+  embeddingModel: string;
 }
 
 export interface Trade {
@@ -169,6 +175,10 @@ const defaultSettings: Settings = {
   binanceApiKey: '',
   binanceApiSecret: '',
   binanceFutures: true,
+  watchlist: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTCUSDT', 'ETHUSDT'],
+  qdrantUrl: '',
+  qdrantApiKey: '',
+  embeddingModel: 'text-embedding-ada-002',
 };
 
 // Sample equity history for demo

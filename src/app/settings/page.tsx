@@ -852,6 +852,54 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Vector Memory / Qdrant — AI Research */}
+        <section className="trading-card space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
+            <Database className="w-4 h-4 text-accent-purple" />
+            <h2 className="text-sm font-semibold text-text-primary">Vector Memory (Qdrant)</h2>
+            <span className="ml-auto text-xs bg-accent-purple/10 text-accent-purple border border-accent-purple/20 px-2 py-0.5 rounded-full">AI Research Lab</span>
+          </div>
+
+          <p className="text-xs text-text-secondary">
+            Connect a <a href="https://qdrant.tech" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:underline">Qdrant</a> vector database
+            so the AI Research Lab can store strategy results as embeddings and recall similar strategies across sessions.
+            <br /><span className="text-text-muted">Free cloud tier available at cloud.qdrant.io (1GB, no credit card).</span>
+          </p>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-text-muted mb-1 block font-medium">Qdrant URL</label>
+              <input className="trading-input" placeholder="https://your-cluster.cloud.qdrant.io"
+                value={settings.qdrantUrl}
+                onChange={e => updateSettings({ qdrantUrl: e.target.value })} />
+              <p className="text-xs text-text-muted mt-1">Your Qdrant cluster endpoint (cloud or self-hosted)</p>
+            </div>
+            <div>
+              <label className="text-xs text-text-muted mb-1 block font-medium">Qdrant API Key</label>
+              <input type="password" className="trading-input" placeholder="Qdrant API key..."
+                value={settings.qdrantApiKey}
+                onChange={e => updateSettings({ qdrantApiKey: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted mb-1 block font-medium">Embedding Model</label>
+              <input className="trading-input" placeholder="text-embedding-ada-002"
+                value={settings.embeddingModel}
+                onChange={e => updateSettings({ embeddingModel: e.target.value })} />
+              <p className="text-xs text-text-muted mt-1">
+                OpenRouter embedding model ID. Recommended: <code className="bg-bg-primary px-1 rounded">text-embedding-ada-002</code>
+                or <code className="bg-bg-primary px-1 rounded">openai/text-embedding-3-small</code>
+              </p>
+            </div>
+            <div className="p-3 bg-accent-purple/5 border border-accent-purple/20 rounded-lg text-xs space-y-1 text-text-secondary">
+              <p className="font-medium text-text-primary">How it works:</p>
+              <p>1. Run AI Research Lab — test strategies across symbols × timeframes</p>
+              <p>2. Top strategies are embedded and stored in Qdrant</p>
+              <p>3. Future research sessions retrieve similar past strategies as context</p>
+              <p>4. LLM builds on accumulated knowledge to find better combinations</p>
+            </div>
+          </div>
+        </section>
+
         {/* Save Button */}
         <button
           onClick={handleSave}

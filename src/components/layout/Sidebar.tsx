@@ -5,7 +5,7 @@ import {
   LayoutDashboard, BrainCircuit, ListOrdered, Settings,
   TrendingUp, ChevronLeft, ChevronRight, Zap,
   CandlestickChart, History, Bot, MessageSquare, FlaskConical,
-  Smartphone
+  Smartphone, Microscope
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/lab', icon: FlaskConical, label: 'Strategy Lab ✨' },
+  { href: '/research', icon: Microscope, label: 'AI Research Lab 🧬' },
   { href: '/chart', icon: CandlestickChart, label: 'Price Chart' },
   { href: '/chat', icon: MessageSquare, label: 'AI Strategy Chat' },
   { href: '/autotrader', icon: Bot, label: 'AI AutoTrader' },
