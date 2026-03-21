@@ -71,6 +71,7 @@ const TIMEFRAMES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4'];
 const TF_INTERVALS: Record<string, number> = {
   M1: 30, M5: 60, M15: 120, M30: 240, H1: 600, H4: 1800,
 };
+// Run AI portfolio health check every N AI decisions to balance API usage vs. real-time awareness.
 const MONITOR_EVERY_N = 5;
 
 function generateDemoCandles(symbol: string, count = 40) {

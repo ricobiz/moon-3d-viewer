@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "mt5-bridge": "cd mt5-bridge && python bridge.py"
+    "mt5-bridge": "cd mt5-bridge && python bridge.py",
+    "test:logic": "node tests/test-business-logic.mjs",
+    "test:api": "node tests/test-monitor-api.mjs",
+    "test": "node tests/test-business-logic.mjs && node tests/test-monitor-api.mjs"
   },
   "dependencies": {
     "@next/swc-linux-x64-gnu": "^16.2.0",
