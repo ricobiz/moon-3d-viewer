@@ -46,7 +46,7 @@ echo  ✓ %PY_VER% found
 if not exist "node_modules" (
     echo.
     echo  [1/3] Installing Node.js packages ^(first run only^)...
-    npm install --silent
+    npm install --quiet
     if %errorlevel% neq 0 (
         echo  ERROR: npm install failed. Check your internet connection.
         pause
@@ -60,7 +60,7 @@ if not exist "node_modules" (
 :: ── Install Python dependencies ───────────────────────────────────────────────
 echo.
 echo  [2/3] Installing Python packages...
-pip install MetaTrader5 flask flask-cors --quiet 2>nul
+pip install MetaTrader5 flask flask-cors --quiet
 echo  ✓ Python packages ready
 
 :: ── Start MT5 Bridge ─────────────────────────────────────────────────────────

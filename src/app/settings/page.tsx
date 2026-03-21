@@ -6,7 +6,7 @@ import {
   Key, Server, Shield, Bell, Save, Eye, EyeOff,
   ExternalLink, CheckCircle, XCircle, Loader2, Info,
   RefreshCw, Building2, CreditCard, ChevronDown, Database, Monitor,
-  Laptop, Globe, Wifi, Copy
+  Laptop, Globe, Wifi, Copy, Smartphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,10 +19,19 @@ interface OpenRouterModel {
 }
 
 export default function SettingsPage() {
-  const { settings, updateSettings, addNotification, setMt5Connected, setAccountInfo } = useStore();
+  const {
+    settings, updateSettings, addNotification,
+    setMt5Connected, setAccountInfo,
+    setBrokerConnected, setBrokerAccount,
+  } = useStore();
   const [showKey, setShowKey] = useState(false);
+  const [showBybitSecret, setShowBybitSecret] = useState(false);
+  const [showBinanceSecret, setShowBinanceSecret] = useState(false);
   const [testingMt5, setTestingMt5] = useState(false);
+  const [testingBroker, setTestingBroker] = useState(false);
   const [mt5TestResult, setMt5TestResult] = useState<'success' | 'error' | null>(null);
+  const [brokerTestResult, setBrokerTestResult] = useState<'success' | 'error' | null>(null);
+  const [brokerTestMsg, setBrokerTestMsg] = useState('');
   const [saved, setSaved] = useState(false);
   const [models, setModels] = useState<OpenRouterModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
@@ -93,10 +102,222 @@ export default function SettingsPage() {
     setTestingMt5(false);
   };
 
+  const handleTestBroker = async () => {
+    const exchange = settings.activeBroker;
+    if (!exchange || exchange === 'mt5') return;
+    const apiKey = exchange === 'bybit' ? settings.bybitApiKey : settings.binanceApiKey;
+    const apiSecret = exchange === 'bybit' ? settings.bybitApiSecret : settings.binanceApiSecret;
+    if (!apiKey || !apiSecret) {
+      addNotification({ type: 'error', title: 'Missing API Keys', message: 'Enter API key and secret first' });
+      return;
+    }
+    setTestingBroker(true);
+    setBrokerTestResult(null);
+    setBrokerTestMsg('');
+    try {
+      const res = await fetch('/api/broker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exchange,
+          apiKey,
+          apiSecret,
+          testnet: settings.bybitTestnet,
+          futures: settings.binanceFutures,
+          action: 'status',
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setBrokerTestResult('success');
+      setBrokerAccount({ type: exchange as 'bybit' | 'binance', balance: data.balance, currency: data.currency, equity: data.equity, unrealizedPnl: data.unrealizedPnl });
+      setBrokerConnected(true);
+      const msg = `Balance: ${data.balance?.toFixed(2)} ${data.currency} | Equity: ${data.equity?.toFixed(2)}`;
+      setBrokerTestMsg(msg);
+      addNotification({ type: 'success', title: `${exchange.charAt(0).toUpperCase() + exchange.slice(1)} Connected!`, message: msg });
+    } catch (err) {
+      setBrokerTestResult('error');
+      const msg = err instanceof Error ? err.message : 'Connection failed';
+      setBrokerTestMsg(msg);
+      addNotification({ type: 'error', title: 'Broker Connection Failed', message: msg });
+    }
+    setTestingBroker(false);
+  };
+
   return (
     <main className="flex-1 overflow-y-auto">
       <Header title="Settings" />
       <div className="p-5 max-w-3xl space-y-6">
+
+        {/* ── Phone/Cloud Trading — Direct Exchange API ──── */}
+        <section className="trading-card space-y-4 border-2 border-accent-blue/30">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
+            <Smartphone className="w-4 h-4 text-accent-blue" />
+            <h2 className="text-sm font-semibold text-text-primary">Phone & Cloud Trading</h2>
+            <span className="ml-auto text-xs bg-accent-blue/10 text-accent-blue border border-accent-blue/20 px-2 py-0.5 rounded-full">No PC · No VPS · 100% Cloud</span>
+          </div>
+
+          <p className="text-xs text-text-secondary">
+            Connect directly to <strong className="text-text-primary">Bybit</strong> or <strong className="text-text-primary">Binance</strong> using their REST API.
+            Everything runs in the cloud (Railway/Vercel) — access from any phone or browser, no computer needed.
+          </p>
+
+          {/* Exchange selector */}
+          <div>
+            <label className="text-xs text-text-muted mb-2 block font-medium">Active trading connection</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: '', label: 'None (Demo)', icon: '🔕' },
+                { value: 'bybit', label: 'Bybit', icon: '🟡' },
+                { value: 'binance', label: 'Binance', icon: '🟠' },
+                { value: 'mt5', label: 'MT5 Bridge', icon: '🖥️' },
+              ] as const).map(opt => (
+                <button key={opt.value}
+                  onClick={() => updateSettings({ activeBroker: opt.value })}
+                  className={cn(
+                    'py-2 px-3 rounded-lg border text-xs font-medium transition-colors text-center',
+                    settings.activeBroker === opt.value
+                      ? 'bg-accent-blue/10 border-accent-blue/40 text-accent-blue'
+                      : 'bg-bg-tertiary border-border text-text-secondary hover:text-text-primary'
+                  )}
+                >
+                  <span className="text-base block mb-0.5">{opt.icon}</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bybit config */}
+          {settings.activeBroker === 'bybit' && (
+            <div className="space-y-3 p-3 bg-accent-yellow/5 border border-accent-yellow/20 rounded-lg">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-text-primary">🟡 Bybit API</p>
+                <a href="https://www.bybit.com/app/user/api-management" target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-accent-blue hover:underline flex items-center gap-1">
+                  Get API key <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">API Key</label>
+                <input className="trading-input" placeholder="Bybit API Key..."
+                  value={settings.bybitApiKey}
+                  onChange={e => updateSettings({ bybitApiKey: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">API Secret</label>
+                <div className="relative">
+                  <input type={showBybitSecret ? 'text' : 'password'}
+                    className="trading-input pr-10" placeholder="Bybit API Secret..."
+                    value={settings.bybitApiSecret}
+                    onChange={e => updateSettings({ bybitApiSecret: e.target.value })} />
+                  <button onClick={() => setShowBybitSecret(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary">
+                    {showBybitSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs text-text-muted font-medium">Use Testnet</label>
+                  <p className="text-xs text-text-muted">Test with virtual funds (bybit.com/app/user/testnet)</p>
+                </div>
+                <button onClick={() => updateSettings({ bybitTestnet: !settings.bybitTestnet })}
+                  className={cn('w-11 h-6 rounded-full transition-colors relative',
+                    settings.bybitTestnet ? 'bg-accent-yellow' : 'bg-bg-tertiary border border-border')}>
+                  <span className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all',
+                    settings.bybitTestnet ? 'left-5' : 'left-0.5')} />
+                </button>
+              </div>
+              <div className="text-xs text-text-muted bg-bg-primary rounded p-2 space-y-1">
+                <p className="font-medium text-text-primary">Required permissions for API key:</p>
+                <p>✓ Read · ✓ Spot trading · ✓ Contract/Derivatives trading</p>
+                <p>⚠ Do NOT enable Withdrawals permission</p>
+              </div>
+            </div>
+          )}
+
+          {/* Binance config */}
+          {settings.activeBroker === 'binance' && (
+            <div className="space-y-3 p-3 bg-accent-yellow/5 border border-accent-yellow/20 rounded-lg">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-text-primary">🟠 Binance API</p>
+                <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-accent-blue hover:underline flex items-center gap-1">
+                  Get API key <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">API Key</label>
+                <input className="trading-input" placeholder="Binance API Key..."
+                  value={settings.binanceApiKey}
+                  onChange={e => updateSettings({ binanceApiKey: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">API Secret</label>
+                <div className="relative">
+                  <input type={showBinanceSecret ? 'text' : 'password'}
+                    className="trading-input pr-10" placeholder="Binance API Secret..."
+                    value={settings.binanceApiSecret}
+                    onChange={e => updateSettings({ binanceApiSecret: e.target.value })} />
+                  <button onClick={() => setShowBinanceSecret(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary">
+                    {showBinanceSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs text-text-muted font-medium">Futures (USDT-M)</label>
+                  <p className="text-xs text-text-muted">OFF = Spot trading</p>
+                </div>
+                <button onClick={() => updateSettings({ binanceFutures: !settings.binanceFutures })}
+                  className={cn('w-11 h-6 rounded-full transition-colors relative',
+                    settings.binanceFutures ? 'bg-accent-blue' : 'bg-bg-tertiary border border-border')}>
+                  <span className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all',
+                    settings.binanceFutures ? 'left-5' : 'left-0.5')} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Test broker connection */}
+          {settings.activeBroker && settings.activeBroker !== 'mt5' && (
+            <div className="space-y-2">
+              <button onClick={handleTestBroker} disabled={testingBroker}
+                className={cn('btn-secondary flex items-center gap-2',
+                  brokerTestResult === 'success' && 'border-accent-green/40 text-accent-green',
+                  brokerTestResult === 'error' && 'border-accent-red/40 text-accent-red',
+                )}>
+                {testingBroker ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : brokerTestResult === 'success' ? <CheckCircle className="w-4 h-4 text-accent-green" />
+                  : brokerTestResult === 'error' ? <XCircle className="w-4 h-4 text-accent-red" />
+                  : <Server className="w-4 h-4" />}
+                {testingBroker ? 'Connecting...' : 'Test Connection'}
+              </button>
+              {brokerTestMsg && (
+                <p className={cn('text-xs', brokerTestResult === 'success' ? 'text-accent-green' : 'text-accent-red')}>
+                  {brokerTestMsg}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* What works from phone */}
+          <div className="p-3 bg-bg-tertiary rounded-lg text-xs space-y-1.5">
+            <p className="font-medium text-text-primary">✅ What works 100% from phone (no VPS):</p>
+            <div className="grid grid-cols-2 gap-1 text-text-secondary">
+              <span>✓ Price charts (TwelveData)</span>
+              <span>✓ AI Strategy generation</span>
+              <span>✓ Strategy backtesting</span>
+              <span>✓ AI Strategy chat</span>
+              <span>✓ Bybit/Binance live trading</span>
+              <span>✓ Portfolio analytics</span>
+            </div>
+            <p className="text-text-muted mt-1">⚠ Forex/CFD (EURUSD, XAUUSD) requires MT5 bridge — use MT5&apos;s built-in VPS or a Windows VPS.</p>
+          </div>
+        </section>
 
         {/* AI / OpenRouter */}
         <section className="trading-card space-y-4">

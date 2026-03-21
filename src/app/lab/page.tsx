@@ -98,8 +98,9 @@ interface BtChartTrade {
 function BacktestChart({ candles, trades }: { candles: { time: number; open: number; high: number; low: number; close: number }[]; trades: BtChartTrade[] }) {
   if (!candles.length) return null;
 
-  // Show at most 200 candles for readability
-  const shown = candles.length > 200 ? candles.slice(candles.length - 200) : candles;
+  // Show at most MAX_DISPLAY_CANDLES candles for readability
+  const MAX_DISPLAY_CANDLES = 200;
+  const shown = candles.length > MAX_DISPLAY_CANDLES ? candles.slice(candles.length - MAX_DISPLAY_CANDLES) : candles;
   const w = 780, h = 240;
   const padL = 6, padR = 56, padT = 16, padB = 28;
   const chartW = w - padL - padR;

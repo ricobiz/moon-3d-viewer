@@ -22,7 +22,10 @@ if %errorlevel% neq 0 (
 
 :: ── Install Python dependencies ───────────────────────────────────────────────
 echo  Installing Python packages...
-pip install MetaTrader5 flask flask-cors --quiet 2>nul
+pip install MetaTrader5 flask flask-cors --quiet
+if %errorlevel% neq 0 (
+    echo  WARNING: Some Python packages may not have installed correctly.
+)
 echo  ✓ Python packages ready
 echo.
 

@@ -4,7 +4,8 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, BrainCircuit, ListOrdered, Settings,
   TrendingUp, ChevronLeft, ChevronRight, Zap,
-  CandlestickChart, History, Bot, MessageSquare, FlaskConical
+  CandlestickChart, History, Bot, MessageSquare, FlaskConical,
+  Smartphone
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,10 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { sidebarCollapsed, toggleSidebar, mt5Connected, accountInfo } = useStore();
+  const { sidebarCollapsed, toggleSidebar, mt5Connected, accountInfo, brokerConnected, brokerAccount, settings } = useStore();
+
+  const isConnected = mt5Connected || brokerConnected;
+  const brokerLabel = settings.activeBroker === 'bybit' ? 'Bybit' : settings.activeBroker === 'binance' ? 'Binance' : 'MT5';
 
   return (
     <aside
@@ -41,7 +45,9 @@ export default function Sidebar() {
         {!sidebarCollapsed && (
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-bold text-text-primary truncate">AI Trade Bot</span>
-            <span className="text-xs text-text-muted">MetaTrader 5</span>
+            <span className="text-xs text-text-muted">
+              {brokerConnected ? brokerLabel : mt5Connected ? 'MetaTrader 5' : 'Demo Mode'}
+            </span>
           </div>
         )}
       </div>
@@ -49,28 +55,40 @@ export default function Sidebar() {
       {/* Connection Status */}
       <div className={cn(
         'mx-3 my-3 rounded-lg border p-2.5 transition-colors',
-        mt5Connected
+        isConnected
           ? 'bg-accent-green/5 border-accent-green/20'
           : 'bg-bg-tertiary border-border'
       )}>
         {sidebarCollapsed ? (
           <div className="flex justify-center">
-            <span className={cn('status-dot', mt5Connected ? 'active' : 'inactive')} />
+            <span className={cn('status-dot', isConnected ? 'active' : 'inactive')} />
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <span className={cn('status-dot flex-shrink-0', mt5Connected ? 'active' : 'inactive')} />
+            <span className={cn('status-dot flex-shrink-0', isConnected ? 'active' : 'inactive')} />
             <div className="min-w-0">
-              <p className="text-xs font-medium text-text-primary truncate">
-                {mt5Connected ? 'MT5 Connected' : 'MT5 Offline'}
-              </p>
-              {mt5Connected && accountInfo && (
-                <p className="text-xs text-text-muted truncate">
-                  #{accountInfo.login} • {accountInfo.server}
-                </p>
-              )}
-              {!mt5Connected && (
-                <p className="text-xs text-text-muted">Configure in Settings</p>
+              {brokerConnected && brokerAccount ? (
+                <>
+                  <p className="text-xs font-medium text-text-primary truncate flex items-center gap-1">
+                    <Smartphone className="w-3 h-3 text-accent-blue" />
+                    {brokerLabel} Connected
+                  </p>
+                  <p className="text-xs text-text-muted truncate">
+                    ${brokerAccount.balance.toFixed(2)} {brokerAccount.currency}
+                  </p>
+                </>
+              ) : mt5Connected ? (
+                <>
+                  <p className="text-xs font-medium text-text-primary truncate">MT5 Connected</p>
+                  {accountInfo && (
+                    <p className="text-xs text-text-muted truncate">#{accountInfo.login} • {accountInfo.server}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-medium text-text-primary">Demo Mode</p>
+                  <p className="text-xs text-text-muted">Connect in Settings</p>
+                </>
               )}
             </div>
           </div>
@@ -100,18 +118,28 @@ export default function Sidebar() {
       </nav>
 
       {/* Account Balance */}
-      {!sidebarCollapsed && accountInfo && (
+      {!sidebarCollapsed && (accountInfo || brokerAccount) && (
         <div className="mx-3 mb-3 p-3 bg-bg-tertiary rounded-lg border border-border">
           <p className="text-xs text-text-muted mb-1">Balance</p>
           <p className="text-base font-bold font-mono text-text-primary">
-            ${accountInfo.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ${(brokerAccount?.balance ?? accountInfo?.balance ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </p>
-          <p className={cn(
-            'text-xs font-mono mt-0.5',
-            accountInfo.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
-          )}>
-            {accountInfo.profit >= 0 ? '+' : ''}{accountInfo.profit.toFixed(2)} today
-          </p>
+          {brokerAccount?.unrealizedPnl != null && (
+            <p className={cn(
+              'text-xs font-mono mt-0.5',
+              brokerAccount.unrealizedPnl >= 0 ? 'text-accent-green' : 'text-accent-red'
+            )}>
+              {brokerAccount.unrealizedPnl >= 0 ? '+' : ''}{brokerAccount.unrealizedPnl.toFixed(2)} unrealized
+            </p>
+          )}
+          {accountInfo && !brokerAccount && (
+            <p className={cn(
+              'text-xs font-mono mt-0.5',
+              accountInfo.profit >= 0 ? 'text-accent-green' : 'text-accent-red'
+            )}>
+              {accountInfo.profit >= 0 ? '+' : ''}{accountInfo.profit.toFixed(2)} today
+            </p>
+          )}
         </div>
       )}
 

@@ -176,12 +176,14 @@ function runBacktest(
   lotSize: number,
 ): BacktestResult {
   const signal = parseStrategy(strategy);
-  // Use a percentage-based pip unit so SL/TP work correctly for all instruments:
-  // Forex (EURUSD ~1.085): pipUnit = 0.0001  → 50 pip SL = 0.0050
-  // Gold  (XAUUSD ~2320):  pipUnit = 0.2320  → 50 pip SL ≈ $11.60
-  // BTC   (BTCUSDT ~68000): pipUnit = 6.8000 → 50 pip SL ≈ $340
+  // Use a percentage-based pip unit so SL/TP work correctly for all instruments.
+  // Threshold >10 distinguishes forex/small pairs from larger-priced instruments:
+  //   Forex (EURUSD ~1.085): pipUnit = 0.0001  → 50 pip SL = 0.0050
+  //   Gold  (XAUUSD ~2320):  pipUnit = 0.2320  → 50 pip SL ≈ $11.60
+  //   BTC   (BTCUSDT ~68000): pipUnit = 6.8000 → 50 pip SL ≈ $340
+  const LARGE_PRICE_THRESHOLD = 10;
   const basePrice = candles[0]?.close || 1;
-  const pipValue = basePrice > 10 ? basePrice * 0.0001 : 0.0001;
+  const pipValue = basePrice > LARGE_PRICE_THRESHOLD ? basePrice * 0.0001 : 0.0001;
 
   let balance = initialBalance;
   let peakBalance = initialBalance;
