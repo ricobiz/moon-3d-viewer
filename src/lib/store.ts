@@ -17,6 +17,20 @@ export interface Settings {
   notifications: boolean;
   twelveDataKey: string;
   alphaVantageKey: string;
+  // Direct exchange API (no MT5/VPS needed)
+  activeBroker: 'mt5' | 'bybit' | 'binance' | '';
+  bybitApiKey: string;
+  bybitApiSecret: string;
+  bybitTestnet: boolean;
+  binanceApiKey: string;
+  binanceApiSecret: string;
+  binanceFutures: boolean;
+  // Instrument watchlist (like MetaTrader Market Watch)
+  watchlist: string[];
+  // Vector memory for AI Research (Qdrant)
+  qdrantUrl: string;
+  qdrantApiKey: string;
+  embeddingModel: string;
 }
 
 export interface Trade {
@@ -75,14 +89,29 @@ export interface EquityPoint {
   balance: number;
 }
 
+export interface BrokerAccount {
+  type: 'bybit' | 'binance';
+  balance: number;
+  currency: string;
+  equity?: number;
+  unrealizedPnl?: number;
+  walletBalance?: number;
+}
+
 interface AppStore {
   // Settings
   settings: Settings;
   updateSettings: (settings: Partial<Settings>) => void;
 
-  // Connection status
+  // MT5 connection status
   mt5Connected: boolean;
   setMt5Connected: (connected: boolean) => void;
+
+  // Direct broker (Bybit / Binance) connection
+  brokerConnected: boolean;
+  setBrokerConnected: (connected: boolean) => void;
+  brokerAccount: BrokerAccount | null;
+  setBrokerAccount: (a: BrokerAccount | null) => void;
 
   // Account
   accountInfo: AccountInfo | null;
@@ -139,6 +168,17 @@ const defaultSettings: Settings = {
   notifications: true,
   twelveDataKey: '',
   alphaVantageKey: '',
+  activeBroker: '',
+  bybitApiKey: '',
+  bybitApiSecret: '',
+  bybitTestnet: false,
+  binanceApiKey: '',
+  binanceApiSecret: '',
+  binanceFutures: true,
+  watchlist: ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTCUSDT', 'ETHUSDT'],
+  qdrantUrl: '',
+  qdrantApiKey: '',
+  embeddingModel: 'text-embedding-ada-002',
 };
 
 // Sample equity history for demo
@@ -169,6 +209,11 @@ export const useStore = create<AppStore>()(
 
       mt5Connected: false,
       setMt5Connected: (connected) => set({ mt5Connected: connected }),
+
+      brokerConnected: false,
+      setBrokerConnected: (connected) => set({ brokerConnected: connected }),
+      brokerAccount: null,
+      setBrokerAccount: (a) => set({ brokerAccount: a }),
 
       accountInfo: null,
       setAccountInfo: (info) => set({ accountInfo: info }),

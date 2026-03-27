@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 import {
   Key, Server, Shield, Bell, Save, Eye, EyeOff,
   ExternalLink, CheckCircle, XCircle, Loader2, Info,
-  RefreshCw, Building2, CreditCard, ChevronDown, Database, Monitor
+  RefreshCw, Building2, CreditCard, ChevronDown, Database, Monitor,
+  Laptop, Globe, Wifi, Copy, Smartphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -18,15 +19,31 @@ interface OpenRouterModel {
 }
 
 export default function SettingsPage() {
-  const { settings, updateSettings, addNotification, setMt5Connected, setAccountInfo } = useStore();
+  const {
+    settings, updateSettings, addNotification,
+    setMt5Connected, setAccountInfo,
+    setBrokerConnected, setBrokerAccount,
+  } = useStore();
   const [showKey, setShowKey] = useState(false);
+  const [showBybitSecret, setShowBybitSecret] = useState(false);
+  const [showBinanceSecret, setShowBinanceSecret] = useState(false);
   const [testingMt5, setTestingMt5] = useState(false);
+  const [testingBroker, setTestingBroker] = useState(false);
   const [mt5TestResult, setMt5TestResult] = useState<'success' | 'error' | null>(null);
+  const [brokerTestResult, setBrokerTestResult] = useState<'success' | 'error' | null>(null);
+  const [brokerTestMsg, setBrokerTestMsg] = useState('');
   const [saved, setSaved] = useState(false);
   const [models, setModels] = useState<OpenRouterModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelSearch, setModelSearch] = useState('');
   const [showAllModels, setShowAllModels] = useState(false);
+  const [copiedCmd, setCopiedCmd] = useState('');
+
+  const copyCmd = (text: string, key: string) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopiedCmd(key);
+    setTimeout(() => setCopiedCmd(''), 2000);
+  };
 
   const fetchModels = async () => {
     setLoadingModels(true);
@@ -85,10 +102,222 @@ export default function SettingsPage() {
     setTestingMt5(false);
   };
 
+  const handleTestBroker = async () => {
+    const exchange = settings.activeBroker;
+    if (!exchange || exchange === 'mt5') return;
+    const apiKey = exchange === 'bybit' ? settings.bybitApiKey : settings.binanceApiKey;
+    const apiSecret = exchange === 'bybit' ? settings.bybitApiSecret : settings.binanceApiSecret;
+    if (!apiKey || !apiSecret) {
+      addNotification({ type: 'error', title: 'Missing API Keys', message: 'Enter API key and secret first' });
+      return;
+    }
+    setTestingBroker(true);
+    setBrokerTestResult(null);
+    setBrokerTestMsg('');
+    try {
+      const res = await fetch('/api/broker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exchange,
+          apiKey,
+          apiSecret,
+          testnet: settings.bybitTestnet,
+          futures: settings.binanceFutures,
+          action: 'status',
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setBrokerTestResult('success');
+      setBrokerAccount({ type: exchange as 'bybit' | 'binance', balance: data.balance, currency: data.currency, equity: data.equity, unrealizedPnl: data.unrealizedPnl });
+      setBrokerConnected(true);
+      const msg = `Balance: ${data.balance?.toFixed(2)} ${data.currency} | Equity: ${data.equity?.toFixed(2)}`;
+      setBrokerTestMsg(msg);
+      addNotification({ type: 'success', title: `${exchange.charAt(0).toUpperCase() + exchange.slice(1)} Connected!`, message: msg });
+    } catch (err) {
+      setBrokerTestResult('error');
+      const msg = err instanceof Error ? err.message : 'Connection failed';
+      setBrokerTestMsg(msg);
+      addNotification({ type: 'error', title: 'Broker Connection Failed', message: msg });
+    }
+    setTestingBroker(false);
+  };
+
   return (
     <main className="flex-1 overflow-y-auto">
       <Header title="Settings" />
       <div className="p-5 max-w-3xl space-y-6">
+
+        {/* ── Phone/Cloud Trading — Direct Exchange API ──── */}
+        <section className="trading-card space-y-4 border-2 border-accent-blue/30">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
+            <Smartphone className="w-4 h-4 text-accent-blue" />
+            <h2 className="text-sm font-semibold text-text-primary">Phone & Cloud Trading</h2>
+            <span className="ml-auto text-xs bg-accent-blue/10 text-accent-blue border border-accent-blue/20 px-2 py-0.5 rounded-full">No PC · No VPS · 100% Cloud</span>
+          </div>
+
+          <p className="text-xs text-text-secondary">
+            Connect directly to <strong className="text-text-primary">Bybit</strong> or <strong className="text-text-primary">Binance</strong> using their REST API.
+            Everything runs in the cloud (Railway/Vercel) — access from any phone or browser, no computer needed.
+          </p>
+
+          {/* Exchange selector */}
+          <div>
+            <label className="text-xs text-text-muted mb-2 block font-medium">Active trading connection</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: '', label: 'None (Demo)', icon: '🔕' },
+                { value: 'bybit', label: 'Bybit', icon: '🟡' },
+                { value: 'binance', label: 'Binance', icon: '🟠' },
+                { value: 'mt5', label: 'MT5 Bridge', icon: '🖥️' },
+              ] as const).map(opt => (
+                <button key={opt.value}
+                  onClick={() => updateSettings({ activeBroker: opt.value })}
+                  className={cn(
+                    'py-2 px-3 rounded-lg border text-xs font-medium transition-colors text-center',
+                    settings.activeBroker === opt.value
+                      ? 'bg-accent-blue/10 border-accent-blue/40 text-accent-blue'
+                      : 'bg-bg-tertiary border-border text-text-secondary hover:text-text-primary'
+                  )}
+                >
+                  <span className="text-base block mb-0.5">{opt.icon}</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bybit config */}
+          {settings.activeBroker === 'bybit' && (
+            <div className="space-y-3 p-3 bg-accent-yellow/5 border border-accent-yellow/20 rounded-lg">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-text-primary">🟡 Bybit API</p>
+                <a href="https://www.bybit.com/app/user/api-management" target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-accent-blue hover:underline flex items-center gap-1">
+                  Get API key <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">API Key</label>
+                <input className="trading-input" placeholder="Bybit API Key..."
+                  value={settings.bybitApiKey}
+                  onChange={e => updateSettings({ bybitApiKey: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">API Secret</label>
+                <div className="relative">
+                  <input type={showBybitSecret ? 'text' : 'password'}
+                    className="trading-input pr-10" placeholder="Bybit API Secret..."
+                    value={settings.bybitApiSecret}
+                    onChange={e => updateSettings({ bybitApiSecret: e.target.value })} />
+                  <button onClick={() => setShowBybitSecret(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary">
+                    {showBybitSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs text-text-muted font-medium">Use Testnet</label>
+                  <p className="text-xs text-text-muted">Test with virtual funds (bybit.com/app/user/testnet)</p>
+                </div>
+                <button onClick={() => updateSettings({ bybitTestnet: !settings.bybitTestnet })}
+                  className={cn('w-11 h-6 rounded-full transition-colors relative',
+                    settings.bybitTestnet ? 'bg-accent-yellow' : 'bg-bg-tertiary border border-border')}>
+                  <span className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all',
+                    settings.bybitTestnet ? 'left-5' : 'left-0.5')} />
+                </button>
+              </div>
+              <div className="text-xs text-text-muted bg-bg-primary rounded p-2 space-y-1">
+                <p className="font-medium text-text-primary">Required permissions for API key:</p>
+                <p>✓ Read · ✓ Spot trading · ✓ Contract/Derivatives trading</p>
+                <p>⚠ Do NOT enable Withdrawals permission</p>
+              </div>
+            </div>
+          )}
+
+          {/* Binance config */}
+          {settings.activeBroker === 'binance' && (
+            <div className="space-y-3 p-3 bg-accent-yellow/5 border border-accent-yellow/20 rounded-lg">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-text-primary">🟠 Binance API</p>
+                <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-accent-blue hover:underline flex items-center gap-1">
+                  Get API key <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">API Key</label>
+                <input className="trading-input" placeholder="Binance API Key..."
+                  value={settings.binanceApiKey}
+                  onChange={e => updateSettings({ binanceApiKey: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">API Secret</label>
+                <div className="relative">
+                  <input type={showBinanceSecret ? 'text' : 'password'}
+                    className="trading-input pr-10" placeholder="Binance API Secret..."
+                    value={settings.binanceApiSecret}
+                    onChange={e => updateSettings({ binanceApiSecret: e.target.value })} />
+                  <button onClick={() => setShowBinanceSecret(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary">
+                    {showBinanceSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-xs text-text-muted font-medium">Futures (USDT-M)</label>
+                  <p className="text-xs text-text-muted">OFF = Spot trading</p>
+                </div>
+                <button onClick={() => updateSettings({ binanceFutures: !settings.binanceFutures })}
+                  className={cn('w-11 h-6 rounded-full transition-colors relative',
+                    settings.binanceFutures ? 'bg-accent-blue' : 'bg-bg-tertiary border border-border')}>
+                  <span className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all',
+                    settings.binanceFutures ? 'left-5' : 'left-0.5')} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Test broker connection */}
+          {settings.activeBroker && settings.activeBroker !== 'mt5' && (
+            <div className="space-y-2">
+              <button onClick={handleTestBroker} disabled={testingBroker}
+                className={cn('btn-secondary flex items-center gap-2',
+                  brokerTestResult === 'success' && 'border-accent-green/40 text-accent-green',
+                  brokerTestResult === 'error' && 'border-accent-red/40 text-accent-red',
+                )}>
+                {testingBroker ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : brokerTestResult === 'success' ? <CheckCircle className="w-4 h-4 text-accent-green" />
+                  : brokerTestResult === 'error' ? <XCircle className="w-4 h-4 text-accent-red" />
+                  : <Server className="w-4 h-4" />}
+                {testingBroker ? 'Connecting...' : 'Test Connection'}
+              </button>
+              {brokerTestMsg && (
+                <p className={cn('text-xs', brokerTestResult === 'success' ? 'text-accent-green' : 'text-accent-red')}>
+                  {brokerTestMsg}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* What works from phone */}
+          <div className="p-3 bg-bg-tertiary rounded-lg text-xs space-y-1.5">
+            <p className="font-medium text-text-primary">✅ What works 100% from phone (no VPS):</p>
+            <div className="grid grid-cols-2 gap-1 text-text-secondary">
+              <span>✓ Price charts (TwelveData)</span>
+              <span>✓ AI Strategy generation</span>
+              <span>✓ Strategy backtesting</span>
+              <span>✓ AI Strategy chat</span>
+              <span>✓ Bybit/Binance live trading</span>
+              <span>✓ Portfolio analytics</span>
+            </div>
+            <p className="text-text-muted mt-1">⚠ Forex/CFD (EURUSD, XAUUSD) requires MT5 bridge — use MT5&apos;s built-in VPS or a Windows VPS.</p>
+          </div>
+        </section>
 
         {/* AI / OpenRouter */}
         <section className="trading-card space-y-4">
@@ -262,59 +491,134 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* VPS for 24/7 trading */}
+        {/* ── Connection Setup: No VPS Required ──────────────────── */}
         <section className="trading-card space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-border">
-            <Monitor className="w-4 h-4 text-accent-purple" />
-            <h2 className="text-sm font-semibold text-text-primary">Trade 24/7 Without a PC</h2>
+            <Wifi className="w-4 h-4 text-accent-blue" />
+            <h2 className="text-sm font-semibold text-text-primary">Connection Setup</h2>
+            <span className="ml-auto text-xs bg-accent-green/10 text-accent-green border border-accent-green/20 px-2 py-0.5 rounded-full">VPS NOT required</span>
           </div>
 
-          <div className="text-xs text-text-secondary space-y-3 leading-relaxed">
-            <p>You have <strong className="text-text-primary">two options</strong> to trade automatically without keeping your computer on:</p>
+          <p className="text-xs text-text-secondary">
+            Choose how to connect the app to MetaTrader 5. <strong className="text-text-primary">Options 1 and 2 are completely free</strong> — no VPS needed.
+          </p>
 
-            {/* Option 1: MT5 VPS */}
-            <div className="p-3 bg-accent-green/5 border border-accent-green/20 rounded-lg space-y-2">
+          <div className="space-y-3 text-xs">
+
+            {/* Option 1: Full Local — RECOMMENDED */}
+            <div className="p-3 bg-accent-green/5 border-2 border-accent-green/30 rounded-xl space-y-2">
               <div className="flex items-center gap-2">
-                <span className="bg-accent-green text-white text-[10px] font-bold px-2 py-0.5 rounded-full">EASIEST</span>
-                <p className="font-semibold text-text-primary">MT5 Built-in VPS (~$5/month)</p>
+                <span className="bg-accent-green text-white text-[10px] font-bold px-2 py-0.5 rounded-full">★ RECOMMENDED</span>
+                <div className="flex items-center gap-1.5">
+                  <Laptop className="w-3.5 h-3.5 text-accent-green" />
+                  <p className="font-semibold text-accent-green">Run Locally on Your PC — 100% Free</p>
+                </div>
               </div>
-              <p>MetaTrader 5 has a built-in VPS service. Your Expert Advisors (EAs) run 24/7 on MetaQuotes servers — no Windows computer needed.</p>
-              <ol className="list-decimal list-inside space-y-1 text-text-muted">
-                <li>Open MetaTrader 5 terminal</li>
-                <li>Go to <strong className="text-text-primary">Tools → VPS</strong></li>
-                <li>Subscribe (~$5/month, or free with some brokers if monthly volume ≥ 3 lots)</li>
-                <li>MT5 automatically migrates your EAs to the cloud server</li>
-              </ol>
-              <p className="text-accent-green">Best for: running MQL5 EAs generated by this app (see AI Strategies page)</p>
+              <p className="text-text-secondary">
+                Run both the web app AND the MT5 bridge on your Windows PC. No servers, no VPS, no costs.
+                MetaTrader 5 must be installed on the same machine.
+              </p>
+              <div className="space-y-1.5">
+                <p className="font-medium text-text-primary">Quick start (double-click):</p>
+                <div className="flex items-center gap-2 bg-bg-primary rounded px-2 py-1.5 font-mono text-accent-green">
+                  <span className="flex-1">start-local.bat</span>
+                  <button onClick={() => copyCmd('start-local.bat', 'local')}
+                    className="text-text-muted hover:text-accent-blue transition-colors">
+                    {copiedCmd === 'local' ? <CheckCircle className="w-3.5 h-3.5 text-accent-green" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-text-muted">Double-click <code className="bg-bg-primary px-1 rounded">start-local.bat</code> in the project root. It installs everything and opens your browser automatically.</p>
+              </div>
+              <details className="mt-1">
+                <summary className="cursor-pointer text-accent-blue hover:underline select-none">Manual steps (if bat doesn&apos;t work)</summary>
+                <ol className="list-decimal list-inside mt-2 space-y-1 text-text-muted pl-2">
+                  <li>Open terminal in project root → <code className="bg-bg-primary px-1 rounded text-accent-blue">npm install</code> then <code className="bg-bg-primary px-1 rounded text-accent-blue">npm run dev</code></li>
+                  <li>Open another terminal → <code className="bg-bg-primary px-1 rounded text-accent-blue">cd mt5-bridge && pip install -r requirements.txt && python bridge.py</code></li>
+                  <li>Open <a href="http://localhost:3000" className="text-accent-blue hover:underline">http://localhost:3000</a></li>
+                  <li>Settings → Bridge URL: <code className="bg-bg-primary px-1 rounded text-accent-blue">http://localhost:8765</code> → Enable → Test</li>
+                </ol>
+              </details>
+              <p className="text-accent-green text-[10px] font-medium">✓ Best option if you have MT5 on your PC and want to trade from the same machine</p>
             </div>
 
-            {/* Option 2: Windows VPS */}
-            <div className="p-3 bg-accent-blue/5 border border-accent-blue/20 rounded-lg space-y-2">
+            {/* Option 2: Cloudflare Tunnel */}
+            <div className="p-3 bg-accent-blue/5 border border-accent-blue/20 rounded-xl space-y-2">
               <div className="flex items-center gap-2">
-                <span className="bg-accent-blue text-white text-[10px] font-bold px-2 py-0.5 rounded-full">ADVANCED</span>
-                <p className="font-semibold text-text-primary">Windows VPS ($10–20/month)</p>
+                <span className="bg-accent-blue text-white text-[10px] font-bold px-2 py-0.5 rounded-full">FREE</span>
+                <div className="flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-accent-blue" />
+                  <p className="font-semibold text-text-primary">Cloudflare Tunnel — Cloud app + Local MT5</p>
+                </div>
               </div>
-              <p>Rent a Windows VPS, install MT5 + our Python bridge. This connects the full web app to MT5 running in the cloud.</p>
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                {[
-                  { name: 'Vultr', note: 'From $6/mo Windows', url: 'vultr.com' },
-                  { name: 'ForexVPS.net', note: 'Optimized for MT5', url: 'forexvps.net' },
-                  { name: 'BeeksFX', note: 'Low latency VPS', url: 'beeksfx.com' },
-                  { name: 'DigitalOcean', note: 'From $12/mo Windows', url: 'digitalocean.com' },
-                ].map(v => (
-                  <div key={v.name} className="bg-bg-primary p-2 rounded">
-                    <p className="font-medium text-text-primary">{v.name}</p>
-                    <p className="text-text-muted">{v.note}</p>
-                    <p className="text-accent-blue">{v.url}</p>
-                  </div>
+              <p className="text-text-secondary">
+                Use the cloud-deployed app (Railway) while MT5 runs on your local PC.
+                Cloudflare Tunnel creates a secure public URL for your local bridge — <strong className="text-text-primary">completely free, no account needed</strong>.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 bg-bg-primary rounded px-2 py-1.5 font-mono text-accent-blue">
+                  <span className="flex-1">start-with-tunnel.bat</span>
+                  <button onClick={() => copyCmd('start-with-tunnel.bat', 'tunnel')}
+                    className="text-text-muted hover:text-accent-blue transition-colors">
+                    {copiedCmd === 'tunnel' ? <CheckCircle className="w-3.5 h-3.5 text-accent-green" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-text-muted">Double-click <code className="bg-bg-primary px-1 rounded">start-with-tunnel.bat</code> — it installs cloudflared, starts the bridge and tunnel, and shows you a URL to paste below.</p>
+              </div>
+              <details>
+                <summary className="cursor-pointer text-accent-blue hover:underline select-none">Manual steps</summary>
+                <ol className="list-decimal list-inside mt-2 space-y-1 text-text-muted pl-2">
+                  <li>Install cloudflared: <code className="bg-bg-primary px-1 rounded text-accent-blue">winget install Cloudflare.cloudflared</code></li>
+                  <li>Start MT5 bridge: <code className="bg-bg-primary px-1 rounded text-accent-blue">python bridge.py --host localhost --port 8765</code></li>
+                  <li>Start tunnel: <code className="bg-bg-primary px-1 rounded text-accent-blue">cloudflared tunnel --url http://localhost:8765</code></li>
+                  <li>Copy the <code className="bg-bg-primary px-1 rounded">https://xxxx.trycloudflare.com</code> URL shown in the terminal</li>
+                  <li>Paste it in the Bridge URL field below → Enable → Test Connection</li>
+                </ol>
+              </details>
+              <p className="text-text-muted text-[10px]">✓ Best option if MT5 is on your home PC but you want to monitor trades from your phone or another device</p>
+            </div>
+
+            {/* Option 3: MT5 VPS */}
+            <div className="p-3 bg-bg-tertiary border border-border rounded-xl space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="bg-accent-yellow/20 text-accent-yellow text-[10px] font-bold px-2 py-0.5 rounded-full">~$5/mo</span>
+                <div className="flex items-center gap-1.5">
+                  <Monitor className="w-3.5 h-3.5 text-accent-purple" />
+                  <p className="font-semibold text-text-primary">MT5 Built-in VPS — Run EAs 24/7</p>
+                </div>
+              </div>
+              <p className="text-text-secondary">
+                MetaTrader 5 has a built-in VPS. Your MQL5 EAs run 24/7 on MetaQuotes servers without keeping your PC on.
+                Free for some brokers (if monthly volume ≥ 3 lots).
+              </p>
+              <ol className="list-decimal list-inside space-y-1 text-text-muted">
+                <li>In MT5: <strong className="text-text-primary">Tools → VPS</strong></li>
+                <li>Subscribe and migrate your EAs</li>
+              </ol>
+              <p className="text-text-muted text-[10px]">Best for: running AI-generated MQL5 strategies 24/7 (AI Strategies page → Download .mq5)</p>
+            </div>
+
+            {/* Option 4: Windows VPS */}
+            <div className="p-3 bg-bg-tertiary border border-border rounded-xl space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="bg-accent-red/20 text-accent-red text-[10px] font-bold px-2 py-0.5 rounded-full">$10–20/mo</span>
+                <div className="flex items-center gap-1.5">
+                  <Server className="w-3.5 h-3.5 text-text-muted" />
+                  <p className="font-semibold text-text-primary">Windows VPS — Full Cloud Setup</p>
+                </div>
+              </div>
+              <p className="text-text-secondary">
+                Rent a Windows VPS, install MT5 + Python bridge. Everything runs in the cloud 24/7.
+              </p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {['Vultr ($6/mo)', 'ForexVPS.net', 'BeeksFX', 'DigitalOcean'].map(v => (
+                  <div key={v} className="bg-bg-primary p-1.5 rounded text-center text-text-muted">{v}</div>
                 ))}
               </div>
-              <ol className="list-decimal list-inside space-y-1 text-text-muted mt-1">
-                <li>Rent a Windows VPS from any provider above</li>
-                <li>Install MetaTrader 5 + Python on the VPS</li>
-                <li>Copy <code className="bg-bg-primary px-1 rounded text-accent-blue">mt5-bridge/bridge.py</code> to the VPS</li>
-                <li>Run the bridge: <code className="bg-bg-primary px-1 rounded text-accent-blue">python bridge.py --host 0.0.0.0</code></li>
-                <li>In Bridge URL below, enter your VPS IP: <code className="bg-bg-primary px-1 rounded text-accent-blue">http://YOUR.VPS.IP:8765</code></li>
+              <ol className="list-decimal list-inside space-y-1 text-text-muted">
+                <li>Rent a Windows VPS, install MT5 + Python</li>
+                <li>Copy <code className="bg-bg-primary px-1 rounded text-accent-blue">mt5-bridge/</code> folder to VPS</li>
+                <li>Run: <code className="bg-bg-primary px-1 rounded text-accent-blue">python bridge.py --host 0.0.0.0</code></li>
+                <li>Enter VPS IP as Bridge URL: <code className="bg-bg-primary px-1 rounded text-accent-blue">http://VPS.IP:8765</code></li>
               </ol>
             </div>
           </div>
@@ -545,6 +849,54 @@ export default function SettingsPage() {
                 settings.notifications ? 'left-5' : 'left-0.5'
               )} />
             </button>
+          </div>
+        </section>
+
+        {/* Vector Memory / Qdrant — AI Research */}
+        <section className="trading-card space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
+            <Database className="w-4 h-4 text-accent-purple" />
+            <h2 className="text-sm font-semibold text-text-primary">Vector Memory (Qdrant)</h2>
+            <span className="ml-auto text-xs bg-accent-purple/10 text-accent-purple border border-accent-purple/20 px-2 py-0.5 rounded-full">AI Research Lab</span>
+          </div>
+
+          <p className="text-xs text-text-secondary">
+            Connect a <a href="https://qdrant.tech" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:underline">Qdrant</a> vector database
+            so the AI Research Lab can store strategy results as embeddings and recall similar strategies across sessions.
+            <br /><span className="text-text-muted">Free cloud tier available at cloud.qdrant.io (1GB, no credit card).</span>
+          </p>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-text-muted mb-1 block font-medium">Qdrant URL</label>
+              <input className="trading-input" placeholder="https://your-cluster.cloud.qdrant.io"
+                value={settings.qdrantUrl}
+                onChange={e => updateSettings({ qdrantUrl: e.target.value })} />
+              <p className="text-xs text-text-muted mt-1">Your Qdrant cluster endpoint (cloud or self-hosted)</p>
+            </div>
+            <div>
+              <label className="text-xs text-text-muted mb-1 block font-medium">Qdrant API Key</label>
+              <input type="password" className="trading-input" placeholder="Qdrant API key..."
+                value={settings.qdrantApiKey}
+                onChange={e => updateSettings({ qdrantApiKey: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted mb-1 block font-medium">Embedding Model</label>
+              <input className="trading-input" placeholder="text-embedding-ada-002"
+                value={settings.embeddingModel}
+                onChange={e => updateSettings({ embeddingModel: e.target.value })} />
+              <p className="text-xs text-text-muted mt-1">
+                OpenRouter embedding model ID. Recommended: <code className="bg-bg-primary px-1 rounded">text-embedding-ada-002</code>
+                or <code className="bg-bg-primary px-1 rounded">openai/text-embedding-3-small</code>
+              </p>
+            </div>
+            <div className="p-3 bg-accent-purple/5 border border-accent-purple/20 rounded-lg text-xs space-y-1 text-text-secondary">
+              <p className="font-medium text-text-primary">How it works:</p>
+              <p>1. Run AI Research Lab — test strategies across symbols × timeframes</p>
+              <p>2. Top strategies are embedded and stored in Qdrant</p>
+              <p>3. Future research sessions retrieve similar past strategies as context</p>
+              <p>4. LLM builds on accumulated knowledge to find better combinations</p>
+            </div>
           </div>
         </section>
 

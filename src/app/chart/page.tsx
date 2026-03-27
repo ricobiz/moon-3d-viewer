@@ -58,7 +58,19 @@ function generateDemoCandles(symbol: string, tf: string, count = 120): Candle[] 
 }
 
 // SVG Candlestick Chart Component
-function CandlestickSVG({ candles, width, height }: { candles: Candle[]; width: number; height: number }) {
+interface ChartTrade {
+  id: string;
+  type: 'BUY' | 'SELL';
+  openPrice: number;
+  currentPrice: number;
+  sl: number;
+  tp: number;
+  profit: number;
+  lots: number;
+  ticket: number;
+}
+
+function CandlestickSVG({ candles, width, height, trades = [] }: { candles: Candle[]; width: number; height: number; trades?: ChartTrade[] }) {
   if (!candles.length) return null;
 
   const padL = 10, padR = 60, padT = 20, padB = 40;
@@ -69,8 +81,15 @@ function CandlestickSVG({ candles, width, height }: { candles: Candle[]; width: 
 
   const lows = candles.map(c => c.low);
   const highs = candles.map(c => c.high);
-  const minPrice = Math.min(...lows);
-  const maxPrice = Math.max(...highs);
+
+  // Extend price range to include trade levels
+  const tradePrices = trades.flatMap(t => [
+    t.openPrice, t.currentPrice,
+    ...(t.sl > 0 ? [t.sl] : []),
+    ...(t.tp > 0 ? [t.tp] : []),
+  ]);
+  const minPrice = Math.min(...lows, ...tradePrices);
+  const maxPrice = Math.max(...highs, ...tradePrices);
   const priceRange = maxPrice - minPrice || 1;
 
   const maxVol = Math.max(...candles.map(c => c.volume));

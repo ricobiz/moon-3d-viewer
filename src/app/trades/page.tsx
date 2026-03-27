@@ -4,6 +4,7 @@ import { useStore } from '@/lib/store';
 import { ArrowUpRight, ArrowDownRight, X, RefreshCw, Filter, TrendingUp, TrendingDown } from 'lucide-react';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { useState } from 'react';
+import TradePositionMap from '@/components/trades/TradePositionMap';
 
 const DEMO_TRADES = [
   { id: '1', ticket: 100001, symbol: 'EURUSD', type: 'BUY' as const, lots: 0.10, openPrice: 1.08234, currentPrice: 1.08456, sl: 1.07900, tp: 1.09000, profit: 22.20, swap: -0.50, openTime: new Date(Date.now() - 3600000).toISOString(), comment: 'RSI Strategy' },
@@ -77,6 +78,9 @@ export default function TradesPage() {
             </div>
           ))}
         </div>
+
+        {/* Visual Position Map */}
+        <TradePositionMap trades={filtered} />
 
         {/* Filter & Table */}
         <div className="trading-card">

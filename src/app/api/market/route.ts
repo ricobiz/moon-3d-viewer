@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol') || 'EURUSD';
   const timeframe = searchParams.get('timeframe') || 'M15';
-  const count = Math.min(500, parseInt(searchParams.get('count') || '100'));
+  const count = Math.min(1000, parseInt(searchParams.get('count') || '100'));
   // Client-supplied API keys (from user Settings, passed as query params)
   const twelveKey = searchParams.get('twelveKey') || undefined;
   const avKey = searchParams.get('avKey') || undefined;
